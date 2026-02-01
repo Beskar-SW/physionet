@@ -219,9 +219,23 @@ def main():
         mask = build_mask(img, config.hsv_lower, config.hsv_upper)
         mask = crop_top_quarter(mask)
 
-        cv2.imshow("Original", resized_image(mask))
+        # cv2.imshow("Original", resized_image(mask))
         mask = cv2.GaussianBlur(mask, (3,3), 0)
-        cv2.imshow("GaussianBlur", resized_image(mask))
+        # cv2.imshow("GaussianBlur", resized_image(mask))
+
+        mask_norm = mask.astype(np.float32) / 255.0 #normalizar los datos para tener [0-1] en sus valores
+        umbral_densidad = 0.17
+        window_size = 7
+
+        kernel = np.ones( (window_size, window_size), np.float32 )
+        mapa_densidad = cv2.filter2D(mask_norm, -1, kernel)
+
+        max_puntos = window_size * window_size
+        densidad_normalizada = mapa_densidad / max_puntos
+        clean_mask = np.where(densidad_normalizada >= umbral_densidad, 255, 0).astype(np.uint8)
+        mask = cv2.bitwise_and(mask, clean_mask)
+        name_file = image_path.name.split('/')[-1].split('.')[0]
+        cv2.imwrite(f"{name_file}_binary.png", mask)
 
         stem = image_path.stem
         leads_output_dir = os.path.join(config.output_dir, stem)
